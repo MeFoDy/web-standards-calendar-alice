@@ -34,7 +34,7 @@ router.post('/', function(req, res, next) {
             if (hasDate(request.request)) {
                 events = filterByDate(events);
             }
-            
+
             events = filterByPlace(events, request.request);
 
             res.json(prepareResponse(events.splice(0, 3), request));
@@ -80,14 +80,16 @@ function prepareEmptyResponse(req) {
 function prepareResponse(events, req) {
     const { session, version } = req;
 
-    const text = events.map(event => {
-        let eventText = `${moment(event.start).format('D MMMM')}`;
-        if (event.location) {
-            eventText += ` в городе ${event.location}`;
-        }
-        eventText += ` пройдёт ${event.summary.replace('#', 'номер ')}.`;
-        return eventText;
-    }).join(' ');
+    const text = events.length ?
+        events.map(event => {
+            let eventText = `${moment(event.start).format('D MMMM')}`;
+            if (event.location) {
+                eventText += ` в городе ${event.location}`;
+            }
+            eventText += ` пройдёт ${event.summary.replace('#', 'номер ')}.`;
+            return eventText;
+        }).join(' ') :
+        'По такому запросу ничего не найдено. Попробуйте по-другому.';
 
     const buttons = events
         .filter(e => e.description)
@@ -123,7 +125,7 @@ function getEvents(data) {
     for (let k in data) {
         if (data.hasOwnProperty(k)) {
             const event = data[k];
-            if (event.type == 'VEVENT') {
+            if (event.type === 'VEVENT') {
                 events.push(event);
             }
         }
@@ -142,15 +144,18 @@ function filterByDate(events) {
 
 function filterByPlace(events, req) {
     return events.filter(event => {
+        if (!event.location) return false;
+
         const cities = new Set();
         const geoEntities = req.nlu.entities.filter(e => e.type === 'YANDEX.GEO');
         geoEntities.forEach(e => {
-            if (e.value.city && !cities.has(e.value.city)) {
-                cities.add(e.value.city);
+            let city = e.value.city && e.value.city.toLowerCase();
+            if (city && !cities.has(city)) {
+                cities.add(city);
             }
         });
 
-        return cities.has(event.location) || req.nlu.tokens.some(token => token === event.location);
+        return cities.has(event.location.toLowerCase()) || req.nlu.tokens.some(token => token === event.location.toLowerCase());
     });
 }
 
