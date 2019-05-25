@@ -1,5 +1,5 @@
 export function handleUnknownError(err, req, res, next) {
-    console.error(err.message, ` | from: ${req.originalUrl}`);
+    console.error(err.message, ` | from: ${req.originalUrl} | `, err.stack);
     res.status(500).json(getErrorResponse(500, 'Internal Error'));
 }
 

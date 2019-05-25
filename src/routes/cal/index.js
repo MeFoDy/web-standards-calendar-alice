@@ -20,7 +20,7 @@ router.get('/', function(req, res, next) {
 router.post('/', function(req, res, next) {
     const request = req.body;
 
-    if (!request.request.original_utterance) {
+    if (!request.request.original_utterance && request.request.type === 'SimpleUtterance') {
         res.json(prepareEmptyResponse(request));
         return;
     }
@@ -148,7 +148,7 @@ function filterByPlace(events, req) {
     const cities = new Set();
     const geoEntities = req.nlu.entities.filter(e => e.type === 'YANDEX.GEO');
 
-    if (req.payload.city) geoEntities.push(req.payload.city);
+    if (req.payload && req.payload.city) cities.add(req.payload.city);
 
     geoEntities.forEach(e => {
         let city = e.value.city && e.value.city.toLowerCase();
