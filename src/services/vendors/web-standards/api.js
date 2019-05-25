@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-    baseURL: 'http://httpbin.org/',
+    baseURL: 'https://web-standards.ru/',
 });
 
 export function get(path, params) {

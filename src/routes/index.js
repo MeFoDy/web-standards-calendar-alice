@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import * as ipRoutes from './ip';
+import * as calRoutes from './cal';
 
 export const router = Router();
 
-router.use('/ip', ipRoutes.router);
+router.use('/cal', calRoutes.router);
