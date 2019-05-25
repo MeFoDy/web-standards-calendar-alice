@@ -31,10 +31,7 @@ router.post('/', function(req, res, next) {
         .then(data => {
             let events = getEvents(data);
 
-            if (hasDate(request.request)) {
-                events = filterByDate(events);
-            }
-
+            events = filterByDate(events);
             events = filterByPlace(events, request.request);
 
             res.json(prepareResponse(events.splice(0, 3), request));
@@ -47,25 +44,25 @@ function prepareEmptyResponse(req) {
 
     return {
         response: {
-            text: "Привет! Со мной ты можешь узнать о ближайших фронтенд событиях в России и мире. Назови город или дату.",
-            tts: "Привет! Со мной ты можешь узнать о ближайших фронт+энд событиях в России и мире. Назови город или дату.",
+            text: "Привет! Со мной ты можешь узнать о ближайших фронтенд событиях в России и мире. Назови город.",
+            tts: "Привет! Со мной ты можешь узнать о ближайших фронт+энд событиях в России и мире. Назови город.",
             buttons: [
                 {
                     title: "Ближайшие события",
                     payload: {},
                     hide: false
                 },
-                {
-                    title: "События завтра",
-                    payload: {
-                        isTomorrowButton: true
-                    },
-                    hide: false
-                },
+                // {
+                //     title: "События завтра",
+                //     payload: {
+                //         isTomorrowButton: true
+                //     },
+                //     hide: false
+                // },
                 {
                     title: "События в Москве",
                     payload: {
-                        city: 'Москва'
+                        city: 'москва'
                     },
                     hide: false
                 }
@@ -88,7 +85,7 @@ function prepareResponse(events, req) {
             }
             eventText += ` пройдёт ${event.summary.replace('#', 'номер ')}.`;
             return eventText;
-        }).join(' ') :
+        }).join('\n') :
         'По такому запросу ничего не найдено. Попробуйте по-другому.';
 
     const buttons = events
@@ -139,24 +136,37 @@ function hasDate(req) {
 }
 
 function filterByDate(events) {
-    return events;
+    return events.filter(event => {
+        const current = new Date().getTime();
+        const start = new Date(event.start).getTime();
+        return (start > current) ||
+            (event.end && new Date(event.end).getTime() > current && start <= current);
+    });
 }
 
 function filterByPlace(events, req) {
-    return events.filter(event => {
-        if (!event.location) return false;
+    const cities = new Set();
+    const geoEntities = req.nlu.entities.filter(e => e.type === 'YANDEX.GEO');
 
-        const cities = new Set();
-        const geoEntities = req.nlu.entities.filter(e => e.type === 'YANDEX.GEO');
-        geoEntities.forEach(e => {
-            let city = e.value.city && e.value.city.toLowerCase();
-            if (city && !cities.has(city)) {
-                cities.add(city);
-            }
-        });
+    if (req.payload.city) geoEntities.push(req.payload.city);
 
-        return cities.has(event.location.toLowerCase()) || req.nlu.tokens.some(token => token === event.location.toLowerCase());
+    geoEntities.forEach(e => {
+        let city = e.value.city && e.value.city.toLowerCase();
+        if (city && !cities.has(city)) {
+            cities.add(city);
+        }
     });
+
+    if (cities.size ||
+        events.some(e => e.location && req.nlu.tokens.includes(e.location.toLowerCase()))) {
+        return events.filter(event => {
+            if (!event.location) return false;
+
+            return cities.has(event.location.toLowerCase()) || req.nlu.tokens.includes(event.location.toLowerCase());
+        });
+    }
+
+    return events;
 }
 
 function parseCalendar(str) {
