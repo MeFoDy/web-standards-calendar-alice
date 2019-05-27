@@ -7,7 +7,7 @@ export const router = Router();
 
 moment.locale('ru-RU');
 
-router.get('/', function(req, res, next) {
+router.get('/', (req, res, next) => {
     wst
         .getRemoteCal()
         .then(vendorResponse => parseCalendar(vendorResponse.data))
@@ -17,10 +17,10 @@ router.get('/', function(req, res, next) {
         .catch(next);
 });
 
-router.post('/', function(req, res, next) {
+router.post('/', (req, res, next) => {
     const request = req.body;
 
-    if (!request.request.original_utterance && request.request.type !== 'ButtonPressed') {
+    if (needHelp(request.request)) {
         res.json(prepareEmptyResponse(request));
         return;
     }
@@ -44,6 +44,16 @@ router.post('/', function(req, res, next) {
         .catch(next);
 });
 
+function needHelp(req) {
+    if (req.nlu.tokens.length <= 2 && req.nlu.tokens.includes('помоги')) {
+        return true;
+    }
+    if (req.nlu.tokens.length === 0 && req.type !== 'ButtonPressed') {
+        return true;
+    }
+    return false;
+}
+
 function needToStop(req) {
     const stopWords = ['хватит', 'стоп', 'спасибо'];
     return req.nlu.tokens.length <= 2 &&
@@ -55,11 +65,11 @@ function prepareStopResponse(req) {
 
     return {
         response: {
-            text: "Приходи ещё. Хорошего дня!",
-            end_session: true
+            text: 'Приходи ещё. Хорошего дня!',
+            end_session: true,
         },
         session,
-        version
+        version,
     };
 }
 
@@ -68,26 +78,26 @@ function prepareEmptyResponse(req) {
 
     return {
         response: {
-            text: "Привет! Со мной ты можешь узнать о ближайших фронтенд событиях в России и мире. Назови город.",
-            tts: "Привет! Со мной ты можешь узнать о ближайших фронт+энд событиях в России и мире. Назови город.",
+            text: 'Привет! Со мной ты можешь узнать о ближайших фронтенд событиях в России и мире. Назови город.',
+            tts: 'Привет! Со мной ты можешь узнать о ближайших фронт+энд событиях в России и мире. Назови город.',
             buttons: [
                 {
-                    title: "Ближайшие события",
+                    title: 'Ближайшие события',
                     payload: {},
-                    hide: false
+                    hide: false,
                 },
                 {
-                    title: "События в Москве",
+                    title: 'События в Москве',
                     payload: {
-                        city: 'москва'
+                        city: 'москва',
                     },
-                    hide: false
-                }
+                    hide: false,
+                },
             ],
-            end_session: false
+            end_session: false,
         },
         session,
-        version
+        version,
     };
 }
 
@@ -113,14 +123,12 @@ function prepareResponse(events, req) {
 
     const buttons = events
         .filter(e => e.description)
-        .map(e => {
-            return {
-                title: e.summary,
-                url: e.description,
-                payload: {},
-                hide: false
-            }
-        });
+        .map(e => ({
+            title: e.summary,
+            url: e.description,
+            payload: {},
+            hide: false,
+        }));
 
     return {
         response: {
@@ -131,19 +139,19 @@ function prepareResponse(events, req) {
                 {
                     title: 'Ближайшие события',
                     payload: {},
-                    hide: false
-                }
+                    hide: false,
+                },
             ],
-            end_session: false
+            end_session: false,
         },
         session,
-        version
+        version,
     };
 }
 
 function getEvents(data) {
     const events = [];
-    for (let k in data) {
+    for (const k in data) {
         if (data.hasOwnProperty(k)) {
             const event = data[k];
             if (event.type === 'VEVENT') {
@@ -170,7 +178,7 @@ function filterByPlace(events, req) {
     if (req.payload && req.payload.city) cities.add(req.payload.city);
 
     geoEntities.forEach(e => {
-        let city = e.value.city && e.value.city.toLowerCase();
+        const city = e.value.city && e.value.city.toLowerCase();
         if (city && !cities.has(city)) {
             cities.add(city);
         }
@@ -190,7 +198,7 @@ function filterByPlace(events, req) {
 
 function parseCalendar(str) {
     return new Promise((resolve, reject) => {
-        ical.parseICS(str, function(err, data) {
+        ical.parseICS(str, (err, data) => {
             if (err) {
                 reject(err);
             }

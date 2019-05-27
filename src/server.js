@@ -2,7 +2,6 @@ import * as bodyParser from 'body-parser';
 import express from 'express';
 import { router } from 'routes';
 import * as errorHandler from 'utils/errorHandler';
-import 'utils/polyfills';
 
 const app = express();
 app.use(bodyParser.json({ limit: '10mb' }));

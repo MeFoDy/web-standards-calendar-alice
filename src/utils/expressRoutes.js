@@ -1,5 +1,4 @@
 import * as CliTable from 'cli-table';
-import * as express from 'express';
 
 export function getRoutes(app) {
     const routes = [];
@@ -23,15 +22,16 @@ function split(thing, param = null) {
         return thing.split('/');
     } else if (thing.fast_slash) {
         return '';
-    } else {
-        const match = thing.toString()
-            .replace('\\/?', '')
-            .replace('(?=\\/|$)', '$')
-            .match(/^\/\^((?:\\[.*+?^${}()|[\]\\\/]|[^.*+?^${}()|[\]\\\/])*)\$\//);
-        return match
-            ? match[1].replace(/\\(.)/g, '$1').split('/')
-            : `:${param || ''}`;
     }
+
+    const match = thing.toString()
+        .replace('\\/?', '')
+        .replace('(?=\\/|$)', '$')
+        .match(/^\/\^((?:\\[.*+?^${}()|[\]\\\/]|[^.*+?^${}()|[\]\\\/])*)\$\//);
+    return match
+        ? match[1].replace(/\\(.)/g, '$1').split('/')
+        : `:${param || ''}`;
+
 }
 
 function get(paths, path, layer) {
