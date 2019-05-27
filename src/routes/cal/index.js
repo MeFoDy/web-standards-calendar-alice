@@ -20,8 +20,13 @@ router.get('/', function(req, res, next) {
 router.post('/', function(req, res, next) {
     const request = req.body;
 
-    if (!request.request.original_utterance && request.request.type === 'SimpleUtterance') {
+    if (!request.request.original_utterance && request.request.type !== 'ButtonPressed') {
         res.json(prepareEmptyResponse(request));
+        return;
+    }
+
+    if (needToStop(request.request)) {
+        res.json(prepareStopResponse(request));
         return;
     }
 
@@ -39,6 +44,25 @@ router.post('/', function(req, res, next) {
         .catch(next);
 });
 
+function needToStop(req) {
+    const stopWords = ['хватит', 'стоп', 'спасибо'];
+    return req.nlu.tokens.length <= 2 &&
+        stopWords.some(w => req.nlu.tokens.includes(w));
+}
+
+function prepareStopResponse(req) {
+    const { session, version } = req;
+
+    return {
+        response: {
+            text: "Приходи ещё. Хорошего дня!",
+            end_session: true
+        },
+        session,
+        version
+    };
+}
+
 function prepareEmptyResponse(req) {
     const { session, version } = req;
 
@@ -52,13 +76,6 @@ function prepareEmptyResponse(req) {
                     payload: {},
                     hide: false
                 },
-                // {
-                //     title: "События завтра",
-                //     payload: {
-                //         isTomorrowButton: true
-                //     },
-                //     hide: false
-                // },
                 {
                     title: "События в Москве",
                     payload: {
@@ -72,6 +89,12 @@ function prepareEmptyResponse(req) {
         session,
         version
     };
+}
+
+function addTextTranscription(text) {
+    return text
+        .replace(/-?JS-?/ig, ' джэ +эс ')
+        .replace(/-?CSS-?/ig, ' си эс +эс ');
 }
 
 function prepareResponse(events, req) {
@@ -102,6 +125,7 @@ function prepareResponse(events, req) {
     return {
         response: {
             text: text,
+            tts: addTextTranscription(text),
             buttons: [
                 ...buttons,
                 {
@@ -128,11 +152,6 @@ function getEvents(data) {
         }
     }
     return events;
-}
-
-function hasDate(req) {
-    return req.nlu.tokens.some(token => ['завтра', 'сегодня', 'послезавтра'].includes(token)) ||
-        req.nlu.entities.some(e => e.type === 'YANDEX.DATETIME');
 }
 
 function filterByDate(events) {
